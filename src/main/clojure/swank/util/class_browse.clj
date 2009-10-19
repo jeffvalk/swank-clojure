@@ -25,13 +25,14 @@
 
 ;;; Class file naming, categorization
 
-(defn jar-file? [#^String n] (.endsWith n ".jar"))
-(defn class-file? [#^String n] (.endsWith n ".class"))
-(defn clojure-ns-file? [#^String n] (.endsWith n "__init.class"))
-(defn clojure-fn-file? [#^String n] (re-find #"\$.*__\d+\.class" n))
-(defn top-level-class-file? [#^String n] (re-find #"^[^\$]+\.class" n))
-(defn anonymous-class-file? [#^String n] (re-find #"\$\d+.*\.class" n))
-(defn nested-class-file? [#^String n] (re-find #"^[^\$]+(\$[^\d]\w*)+\.class" n))
+(defn jar-file? [#^String p] (.endsWith p ".jar"))
+(defn class-file? [#^String p] (.endsWith p ".class"))
+(defn clojure-ns-file? [#^String p] (.endsWith p "__init.class"))
+(defn clojure-fn-file? [#^String p] (re-find #"\$.*__\d+\.class" p))
+(defn top-level-class-file? [#^String p] (re-find #"^[^\$]+\.class$" p))
+(defn anonymous-class-file? [#^String p] (re-find #"\$\d+.*\.class$" p))
+(defn anonymous-class-name? [#^String n] (re-find #"\$\d+" n))
+(defn nested-class-file? [#^String p] (re-find #"^[^\$]+(\$[^\d]\w*)+\.class$" p))
                                         ; ^ excludes anonymous classes
 
 (def clojure-ns? (comp clojure-ns-file? :file))
@@ -44,16 +45,17 @@
   "Returns the simple name of a qualified class name, or nil if the class is
   anonymous."
   [#^String n]
-  (if (anonymous-class-file? n) nil
+  (if (anonymous-class-name? n) nil
       (.substring n (inc (.lastIndexOf n ".")))))
 
 (defn class-or-ns-name
-  "Returns the Java class or Clojure namespace name for a class relative path."
-  [#^String n]
+  "Returns the qualified Java class or Clojure namespace name for a class file
+  relative path."
+  [#^String p]
   (.replaceAll
-   (if (clojure-ns-file? n)
-     (-> n (.replace "__init.class" "") (.replace "_" "-"))
-     (.replace n ".class" ""))
+   (if (clojure-ns-file? p)
+     (-> p (.replace "__init.class" "") (.replace "_" "-"))
+     (.replace p ".class" ""))
    (str "[/" File/separator "]") "."))	; jar separator is always '/'
 
 ;;; Path scanning
@@ -116,8 +118,8 @@
 (defn expand-wildcard
   "Expands a wildcard path entry to its matching .jar files (JDK 1.6+).
   If not expanding, returns the path entry as a single-element vector."
-  [#^String path]
-  (let [f (File. path)]
+  [#^String p]
+  (let [f (File. p)]
     (if (and (= (.getName f) "*") (>= java-version 1.6))
       (-> f .getParentFile
           (.list (proxy [FilenameFilter] []
@@ -170,3 +172,4 @@
   (map :name
        (filter #(= (:sname %) sname)
                available-classes)))
+
