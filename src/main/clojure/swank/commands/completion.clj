@@ -53,10 +53,10 @@
   classpath. To minimize noise, list is nil unless a '.' is present in the search
   string, and nested classes are only shown if a '$' is present."
   ([symbol-string]
-	 (when (.contains symbol-string ".")
-	   (if (.contains symbol-string "$")
-		 @nested-classes
-		 @top-level-classes))))
+     (when (.contains symbol-string ".")
+       (if (.contains symbol-string "$")
+         @nested-class-names
+         @top-level-class-names))))
 
 (defn resolve-class
   "Attempts to resolve a symbol into a java Class. Returns nil on
@@ -90,8 +90,8 @@
 (defslimefn simple-completions [symbol-string package]
   (try
    (let [[sym-ns sym-name] (symbol-name-parts symbol-string)
-		 potential         (concat (potential-completions (when sym-ns (symbol sym-ns)) (ns-name (maybe-ns package)))
-								   (potiential-classes-on-path symbol-string))
+         potential         (concat (potential-completions (when sym-ns (symbol sym-ns)) (ns-name (maybe-ns package)))
+                                   (potiential-classes-on-path symbol-string))
          matches           (seq (sort (filter #(.startsWith #^String % symbol-string) potential)))]
      (list matches
            (if matches
