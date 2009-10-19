@@ -53,10 +53,12 @@
   classpath. To minimize noise, list is nil unless a '.' is present in the search
   string, and nested classes are only shown if a '$' is present."
   ([symbol-string]
-     (when (.contains symbol-string ".")
+     (if (.contains symbol-string ".")
        (if (.contains symbol-string "$")
          @nested-class-names
-         @top-level-class-names))))
+         @top-level-class-names)
+       (when (re-find #"^[A-Z]" symbol-string)
+         @simple-class-names))))
 
 (defn resolve-class
   "Attempts to resolve a symbol into a java Class. Returns nil on
