@@ -150,26 +150,48 @@
 ;; no sense holding up SLIME init. (It's usually quick, but a monstrous
 ;; classpath could concievably take a while.)
 
-(def simple-class-names
-     (future (doall (map :sname
-                         (filter (complement anonymous-class?)
-                                 available-classes)))))
+(def top-level-classes
+     (future (doall (filter top-level-class?
+                            available-classes))))
+(def nested-classes
+     (future (doall (filter nested-class?
+                            available-classes))))
 
-(def top-level-class-names
-     (future (doall (map :name
-                         (filter top-level-class?
-                                 available-classes)))))
-
-(def nested-class-names
-     (future (doall (map :name
-                         (filter nested-class?
-                                 available-classes)))))
+;; (def top-level-simple-names (future (doall (map :sname @top-level-classes))))
+;; (def top-level-class-names (future (doall (map :name @top-level-classes))))
+;; (def nested-simple-names (future (doall (map :sname @nested-classes))))
+;; (def nested-class-names (future (doall (map :name @nested-classes))))
 
 (defn resolve-class-name
-  "Returns the list of qualified class names that match the specifed
-  simple class name."
-  [sname]
-  (map :name
-       (filter #(= (:sname %) sname)
-               available-classes)))
+  "Returns the list of qualified class names that match the specifed search.
+  Search will be against qualified names is a '.' is present in the search
+  string, and against simple names otherwise. Nested classes are only considered
+  if a '$' is present in the search string."
+  [s]
+  (let [classes (if (.contains s "$") @nested-classes @top-level-classes)
+        attrib  (if (.contains s ".") :name :sname)]
+    (concat
+     (sort (map :name (filter #(.startsWith (attrib %) s) classes))) ; prefer these
+     (sort (map :name (filter #(re-find (re-pattern s) (attrib %)) classes))))))
 
+(comment
+  (in-ns 'swank.util.class-browse)
+  (use 'clojure.test)
+
+  (deftest test-class-names
+    ;; Simple names should be nil (anonymous) or correspond to qualified name.
+    (is (every?   #(or (nil? (:sname %)) (.endsWith (:name %) (:sname %)))
+                  available-classes))
+    (is (not-any? #(and (:sname %) (.contains (:sname %) "."))
+                  available-classes)))
+
+  (deftest test-top-level
+    (is (not-any? #(.contains (:name %) "$")
+                  (filter top-level-class? available-classes))))
+
+  (deftest test-nested
+    (is (every? #(.contains (:name %) "$")
+                (filter nested-class? available-classes))))
+
+  (run-tests 'swank.util.class-browse)
+  )

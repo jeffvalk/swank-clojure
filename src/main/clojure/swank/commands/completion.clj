@@ -50,15 +50,15 @@
 
 (defn potiential-classes-on-path
   "Returns a list of Java class and Clojure package names found on the current
-  classpath. To minimize noise, list is nil unless a '.' is present in the search
-  string, and nested classes are only shown if a '$' is present."
-  ([symbol-string]
-     (if (.contains symbol-string ".")
-       (if (.contains symbol-string "$")
-         @nested-class-names
-         @top-level-class-names)
-       (when (re-find #"^[A-Z]" symbol-string)
-         @simple-class-names))))
+  classpath. To minimize noise, qualified names are not considered unless a '.'
+  is present in the search string, nested classes are only shown if a '$' is
+  present, and simple names are only shown if the search string is initially
+  capitalized."
+  [s]
+  (let [classes (if (.contains s "$") @nested-classes @top-level-classes)
+        attrib  (if (.contains s ".") :name :sname)]
+    (when (or (= attrib :name) (re-find #"^[A-Z]" s))
+      (map attrib classes))))
 
 (defn resolve-class
   "Attempts to resolve a symbol into a java Class. Returns nil on
